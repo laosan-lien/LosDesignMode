@@ -2,11 +2,9 @@ package com.los.testandroiddesignmode.imageloader
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.util.LruCache
 import android.widget.ImageView
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -19,7 +17,23 @@ private const val TAG = "Los:ImageLoader"
 class ImageLoader {
 
 
+    //内存缓存
     private val mImageCache = ImageCache()
+
+    //Sdcard缓存
+    private val mDiskCache = DiskCache()
+
+    //双缓存
+    private val mDoubleCache = DoubleCache()
+
+    //是否使用sdCard缓存
+    private var isUseDiskCache = false
+
+    //是否使用双缓存
+    private var isDoubleCache = false
+
+
+    //线程池
     private var mExecutorService: ExecutorService =
         Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
     private var mUiHandler: Handler = Handler(Looper.getMainLooper())
@@ -27,11 +41,18 @@ class ImageLoader {
 
     //加载图片
     private fun displayImage(url: String, imageView: ImageView) {
-        var bitmap: Bitmap? = mImageCache.get(url)
+        var bitmap: Bitmap? = if (isUseDiskCache) {
+            mDoubleCache.get(url)
+        } else if (isUseDiskCache) {
+            mDiskCache.get(url)
+        } else {
+            mImageCache.get(url)
+        }
         bitmap?.let {
             imageView.setImageBitmap(it)
             return
         }
+        //没有缓存就提交给线程池进行异步下载图片
         imageView.tag = url
         mExecutorService.submit {
             bitmap = downloadImage(url) ?: return@submit
@@ -61,7 +82,13 @@ class ImageLoader {
         return bitmap
     }
 
+    fun useDiskCache(useDiskCache: Boolean) {
+        isUseDiskCache = useDiskCache
+    }
 
+    fun useDoubleCache(useDoubleCache: Boolean) {
+        isDoubleCache = useDoubleCache
+    }
 
 
 }
