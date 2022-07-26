@@ -17,20 +17,11 @@ private const val TAG = "Los:ImageLoader"
 class ImageLoader {
 
 
-    //内存缓存
-    private val mImageCache = ImageCache()
+    private var mImageCache: IMemoryCache? = null
 
-    //Sdcard缓存
-    private val mDiskCache = DiskCache()
-
-    //双缓存
-    private val mDoubleCache = DoubleCache()
-
-    //是否使用sdCard缓存
-    private var isUseDiskCache = false
-
-    //是否使用双缓存
-    private var isDoubleCache = false
+    fun setImageCache(memoryCache: ImageCache) {
+        mImageCache = memoryCache
+    }
 
 
     //线程池
@@ -41,25 +32,34 @@ class ImageLoader {
 
     //加载图片
     private fun displayImage(url: String, imageView: ImageView) {
-        var bitmap: Bitmap? = if (isUseDiskCache) {
-            mDoubleCache.get(url)
-        } else if (isUseDiskCache) {
-            mDiskCache.get(url)
+        val bitmap: Bitmap?
+        if (mImageCache != null) {
+            bitmap = mImageCache?.get(url)
+            bitmap?.let {
+                imageView.setImageBitmap(it)
+                return
+            }
+
+            submitLoadRequest(url, imageView)
+            //没有缓存就提交给线程池进行异步下载图片
+
         } else {
-            mImageCache.get(url)
+            Log.d(TAG, "displayImage: mImageCahce is null")
         }
-        bitmap?.let {
-            imageView.setImageBitmap(it)
-            return
-        }
-        //没有缓存就提交给线程池进行异步下载图片
+    }
+
+    private fun submitLoadRequest(url: String, imageView: ImageView) {
         imageView.tag = url
         mExecutorService.submit {
-            bitmap = downloadImage(url) ?: return@submit
-            if (imageView.tag == url) {
-                updateImageView(imageView, bitmap!!)
+            val bitmap = downloadImage(url)
+            if(bitmap == null){
+                Log.d(TAG, "submitLoadRequest: bitmap download error")
+                return@submit
             }
-            mImageCache.put(url, bitmap!!)
+            if (imageView.tag == url) {
+                updateImageView(imageView, bitmap)
+            }
+            mImageCache?.put(url, bitmap)
         }
     }
 
@@ -81,14 +81,5 @@ class ImageLoader {
         }
         return bitmap
     }
-
-    fun useDiskCache(useDiskCache: Boolean) {
-        isUseDiskCache = useDiskCache
-    }
-
-    fun useDoubleCache(useDoubleCache: Boolean) {
-        isDoubleCache = useDoubleCache
-    }
-
 
 }

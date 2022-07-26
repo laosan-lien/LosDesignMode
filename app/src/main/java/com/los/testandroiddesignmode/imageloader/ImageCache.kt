@@ -4,7 +4,7 @@ import android.graphics.Bitmap
 import android.util.LruCache
 import kotlin.math.min
 
-class ImageCache {
+class ImageCache :IMemoryCache {
     private lateinit var mImageCache: LruCache<String, Bitmap>
 
     init {
@@ -21,11 +21,11 @@ class ImageCache {
         }
     }
 
-    fun put(url: String, bitmap: Bitmap) {
+    override fun put(url: String, bitmap: Bitmap) {
         mImageCache.put(url, bitmap)
     }
 
-    fun get(url: String): Bitmap? {
+    override fun get(url: String): Bitmap? {
         return mImageCache.get(url)
     }
 
