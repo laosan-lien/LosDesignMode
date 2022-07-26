@@ -2,11 +2,9 @@ package com.los.testandroiddesignmode.imageloader
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.util.LruCache
 import android.widget.ImageView
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -19,7 +17,14 @@ private const val TAG = "Los:ImageLoader"
 class ImageLoader {
 
 
-    private val mImageCache = ImageCache()
+    private var mImageCache: IMemoryCache? = null
+
+    fun setImageCache(memoryCache: ImageCache) {
+        mImageCache = memoryCache
+    }
+
+
+    //线程池
     private var mExecutorService: ExecutorService =
         Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
     private var mUiHandler: Handler = Handler(Looper.getMainLooper())
@@ -27,18 +32,34 @@ class ImageLoader {
 
     //加载图片
     private fun displayImage(url: String, imageView: ImageView) {
-        var bitmap: Bitmap? = mImageCache.get(url)
-        bitmap?.let {
-            imageView.setImageBitmap(it)
-            return
+        val bitmap: Bitmap?
+        if (mImageCache != null) {
+            bitmap = mImageCache?.get(url)
+            bitmap?.let {
+                imageView.setImageBitmap(it)
+                return
+            }
+
+            submitLoadRequest(url, imageView)
+            //没有缓存就提交给线程池进行异步下载图片
+
+        } else {
+            Log.d(TAG, "displayImage: mImageCahce is null")
         }
+    }
+
+    private fun submitLoadRequest(url: String, imageView: ImageView) {
         imageView.tag = url
         mExecutorService.submit {
-            bitmap = downloadImage(url) ?: return@submit
-            if (imageView.tag == url) {
-                updateImageView(imageView, bitmap!!)
+            val bitmap = downloadImage(url)
+            if(bitmap == null){
+                Log.d(TAG, "submitLoadRequest: bitmap download error")
+                return@submit
             }
-            mImageCache.put(url, bitmap!!)
+            if (imageView.tag == url) {
+                updateImageView(imageView, bitmap)
+            }
+            mImageCache?.put(url, bitmap)
         }
     }
 
@@ -60,8 +81,5 @@ class ImageLoader {
         }
         return bitmap
     }
-
-
-
 
 }

@@ -10,15 +10,15 @@ import java.io.IOException
 private const val cacheDir = "sdcard/cache/"
 private const val TAG = "Los:DiskCache"
 
-class DiskCache {
+class DiskCache:IMemoryCache {
 
 
-    fun get(url: String): Bitmap? {
+    override fun get(url: String): Bitmap? {
         return BitmapFactory.decodeFile(cacheDir + url)
     }
 
     //将image缓存到内存中
-    fun put(url: String, bitmap: Bitmap) {
+    override fun put(url: String, bitmap: Bitmap) {
         var fileOutputStream: FileOutputStream? = null
         try {
             fileOutputStream = FileOutputStream(cacheDir + url)
