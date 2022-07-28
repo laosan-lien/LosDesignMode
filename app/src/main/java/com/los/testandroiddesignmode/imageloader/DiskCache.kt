@@ -3,6 +3,7 @@ package com.los.testandroiddesignmode.imageloader
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import com.los.testandroiddesignmode.utils.CloseUtil
 import java.io.FileOutputStream
 import java.io.IOException
 
@@ -28,6 +29,7 @@ class DiskCache:IMemoryCache {
         } finally {
             if (fileOutputStream != null) {
                 try {
+                    CloseUtil.closeQuietly(fileOutputStream)
                     fileOutputStream.close()
                 } catch (e: IOException) {
                     Log.d(TAG, "put: file output stream close error")
